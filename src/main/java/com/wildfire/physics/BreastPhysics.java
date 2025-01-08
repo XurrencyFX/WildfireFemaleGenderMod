@@ -269,29 +269,31 @@ public class BreastPhysics {
 		// as any faster and the arm effectively doesn't swing at all; we check the previous tick's swing duration for
 		// reasons explained later on in this block
 		if((swingDuration > 1 || lastSwingDuration > 1) && pose != EntityPose.SLEEPING) {
-
-			float amplifier = 0f;
+			float rawAmplifier = 0f;
 			if(swingDuration < 6) {
-				amplifier = 0.15f * (6 - swingDuration);
+				rawAmplifier = 0.15f * (6 - swingDuration);
 			} else if(swingDuration > 6) {
-				amplifier = -0.067f * (swingDuration - 6);
+				rawAmplifier = -0.055f * (swingDuration - 6);
 			}
-			// Cap our amplifier at the swing durations of Mining Fatigue III/Haste II
-			amplifier = MathHelper.clamp(1 + amplifier, 0.6f, 1.3f);
+			// Cap our amplifier at the swing durations of Mining Fatigue IV/Haste II
+			float amplifier = MathHelper.clamp(1 + rawAmplifier, 0.6f, 1.3f);
+
+			Arm swingingArm = entity.preferredHand == Hand.MAIN_HAND ? entity.getMainArm() : entity.getMainArm().getOpposite();
+			int swingTickDelta = entity.handSwingTicks - lastSwingTick;
+			float swingProgress = distanceFromMedian(0, lastSwingDuration, MathHelper.clamp(lastSwingTick, 0, lastSwingDuration));
+			Arm swingingToward = swingProgress > -0.2f ? swingingArm.getOpposite() : swingingArm;
 
 			// consistently apply even with short swing durations, such as with haste
 			int everyNthTick = MathHelper.clamp(swingDuration - 1, 1, 5);
 			if(entity.handSwinging && entity.age % everyNthTick == 0) {
-				float hasteMult = MathHelper.clamp(everyNthTick / 5f, 0.4f, 1f);
-				this.targetBounceY += (Math.random() > 0.5 ? -0.25f : 0.25f) * amplifier * bounceIntensity * hasteMult;
-
-
-				this.targetBounceX = (0.5f * bounceIntensity) * (entity.getMainArm()==Arm.RIGHT?1f:-1f);
+				this.targetBounceY += (Math.random() > 0.5 ? -0.25f : 0.25f) * amplifier * bounceIntensity;
+				// The regular amplifier here makes this look relatively unnatural at high levels of mining fatigue,
+				// so instead we're increasing the potency of negative amplifiers (and decreasing positive amplifiers),
+				// and clamping this at a lower range than normal.
+				// The effective range of these numbers is around the swing durations of Mining Fatigue V to Haste II.
+				var xAmp = MathHelper.clamp(1 + (rawAmplifier * (rawAmplifier < 0 ? 1.625f : 0.8f)), 0.25f, 1.225f);
+				this.targetBounceX = (0.25f * xAmp * bounceIntensity) * (swingingArm == Arm.RIGHT ? -1f : 1f);
 			}
-
-			int swingTickDelta = entity.handSwingTicks - lastSwingTick;
-			float swingProgress = distanceFromMedian(0, lastSwingDuration, MathHelper.clamp(lastSwingTick, 0, lastSwingDuration));
-			Arm swingingArm = entity.preferredHand == Hand.MAIN_HAND ? entity.getMainArm() : entity.getMainArm().getOpposite();
 
 			if(swingTickDelta < 0 && lastSwingTick != lastSwingDuration - 1) {
 				// Add a bit of counter-rotation back toward the currently swinging arm if the previous arm swing
@@ -299,11 +301,10 @@ public class BreastPhysics {
 				// Note that we don't check if the player's arm is currently swinging here to account for cases like
 				// haste being used to reset a player's swing; one notable example of this is Wynncraft's spell casting,
 				// which applies haste to the player when a spell is successfully cast.
-				this.targetRotVel += (swingingArm == Arm.RIGHT ? -2.5f : 2.5f) * Math.abs(swingProgress) * bounceIntensity;
+				this.targetRotVel += (swingingArm == Arm.RIGHT ? -4f : 4f) * Math.abs(swingProgress) * bounceIntensity;
 			} else if(entity.handSwinging && swingDuration > 1) {
 				// Otherwise if the swing animation isn't interrupted, attempt to rotate slightly counter to the
 				// direction that the body is currently moving
-				Arm swingingToward = swingProgress > 0f ? swingingArm.getOpposite() : swingingArm;
 				this.targetRotVel += (swingingToward == Arm.RIGHT ? -0.2f : 0.2f) * amplifier * bounceIntensity;
 			}
 			lastSwingTick = entity.handSwingTicks;
@@ -392,8 +393,8 @@ public class BreastPhysics {
 	/**
 	 * Return the distance from the median of the two provided boundary points from a given point
 	 *
-	 * @param p1    Lower boundary point
-	 * @param p2    Upper boundary point
+	 * @param p1    Lower boundary point (inclusive)
+	 * @param p2    Upper boundary point (inclusive)
 	 * @param point The target point within the range of {@code p1} and {@code p2} to get the distance from the median of
 	 *
 	 * @return A {@code float} indicating how far the provided {@code point} is from the median of the two boundary
