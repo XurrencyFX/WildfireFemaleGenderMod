@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from json.decoder import JSONDecodeError
 from glob import glob
@@ -13,6 +15,16 @@ critical = [
 should_fail = False
 
 jsons = [Path(x) for x in glob("src/main/resources/**/*.json", recursive=True)]
+
+class Group:
+    def __init__(self, name: str):
+        self.name = name
+
+    def __enter__(self):
+        print(f"::group::{self.name}")
+
+    def __exit__(self, *args):
+        print(f"::endgroup::")
 
 for file in jsons:
     with open(file) as f:
@@ -43,17 +55,14 @@ for translation in glob("src/main/resources/assets/wildfire_gender/lang/*.json")
     missing_from_root = {x for x in strings if x not in root_translations}
     missing_from_translation = {x for x in root_translations if x not in strings}
 
-    if missing_from_root or missing_from_translation:
-        print(f"::group::{file.name}")
-
-    if missing_from_root:
-        print(f"::notice file={translation}::Has {len(missing_from_root)} extra translation strings")
-        for key in missing_from_root:
-            print(f"  > {key}")
-    if missing_from_translation:
-        print(f"::notice file={translation}::Missing {len(missing_from_translation)} translation strings")
-        for key in missing_from_translation:
-            print(f"  > {key}")
-
-    if missing_from_root or missing_from_translation:
-        print(f"::endgroup::")
+    with Group(file.name):
+        if missing_from_root:
+            print(f"::notice file={translation}::Has {len(missing_from_root)} extra translation strings")
+            for key in missing_from_root:
+                print(f"  - {key}")
+        if missing_from_translation:
+            print(f"::notice file={translation}::Missing {len(missing_from_translation)} translation strings")
+            for key in missing_from_translation:
+                print(f"  - {key}")
+        if not missing_from_translation and not missing_from_root:
+            print("No missing translations!")

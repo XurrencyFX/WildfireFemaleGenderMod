@@ -121,17 +121,19 @@ public class CapeProvider {
         try {
             WildfireGender.LOGGER.debug("Attempting to fetch cape from {}", urlFrom);
             var url = URI.create(urlFrom).toURL();
-            var tex = uncrop(NativeImage.read(url.openStream()));
+            var image = uncrop(NativeImage.read(url.openStream()));
             WildfireGender.LOGGER.debug("Got cape texture");
-            var nIBT = new NativeImageBackedTexture(tex);
-            var id = WildfireGender.MODID + "/cape/" + player.getId().toString().replace("-", "");
 
-            MinecraftClient.getInstance().getTextureManager().registerTexture(Identifier.of(id), nIBT);
+            var id = Identifier.of(WildfireGender.MODID, "cape/" + player.getId().toString().replace("-", ""));
+            var texture = new NativeImageBackedTexture(id::toString, image);
+            MinecraftClient.getInstance().getTextureManager().registerTexture(id, texture);
 
-            return Identifier.of(id);
+            return id;
         } catch(FileNotFoundException e) {
             // Getting the cape was successful! But there's no cape, so don't retry.
             WildfireGender.LOGGER.debug("No cape texture found");
+            // TODO this feels janky, but would probably require a special Optional-like class
+            //      with a dedicated missing state to properly work around this
             return NO_CAPE;
         } catch(Exception e) {
             WildfireGender.LOGGER.error("Failed to fetch cape texture", e);
