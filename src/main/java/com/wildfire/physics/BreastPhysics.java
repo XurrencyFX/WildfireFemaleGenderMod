@@ -228,8 +228,8 @@ public class BreastPhysics {
 		}
 
 		//button option for extra entities
-		if(entity.getVehicle() != null) {
-			if(entity.getVehicle() instanceof BoatEntity boat) {
+		switch(entity.getVehicle()) {
+			case BoatEntity boat -> {
 				int rowTime = (int) boat.lerpPaddlePhase(0, entity.limbAnimator.getPos());
 				int rowTime2 = (int) boat.lerpPaddlePhase(1, entity.limbAnimator.getPos());
 
@@ -238,30 +238,35 @@ public class BreastPhysics {
 				if(rotationL < -1 || rotationR < -0.6f) {
 					this.targetBounceY = bounceIntensity / 3.25f;
 				}
-			} else if(entity.getVehicle() instanceof MinecartEntity cart) {
+			}
+			case MinecartEntity cart -> {
 				float speed = (float) cart.getVelocity().lengthSquared();
 				if(Math.random() * speed < 0.5f && speed > 0.2f) {
 					this.targetBounceY = (Math.random() > 0.5 ? -bounceIntensity : bounceIntensity) / 6f;
 					this.targetBounceY += breastWeight;
 				}
-			} else if(entity.getVehicle() instanceof AbstractHorseEntity horse) {
+			}
+			case AbstractHorseEntity horse -> {
 				float movement = (float) horse.getVelocity().lengthSquared();
 				if(horse.age % clampMovement(movement) == 5 && movement > 0.05f) {
 					this.targetBounceY = bounceIntensity / 4f;
 					this.targetBounceY += breastWeight;
 				}
-			} else if(entity.getVehicle() instanceof PigEntity pig) {
+			}
+			case PigEntity pig -> {
 				float movement = (float) pig.getVelocity().lengthSquared();
 				if(pig.age % clampMovement(movement) == 5 && movement > 0.002f) {
 					this.targetBounceY = (bounceIntensity * MathHelper.clamp(movement * 75, 0.1f, 1f)) / 4f;
 					this.targetBounceY += breastWeight;
 				}
-			} else if(entity.getVehicle() instanceof StriderEntity strider) {
+			}
+			case StriderEntity strider -> {
 				double heightOffset = (double)strider.getHeight() - 0.19
 						+ (double)(0.12F * MathHelper.cos(strider.limbAnimator.getPos() * 1.5f)
 						* 2F * Math.min(0.25F, strider.limbAnimator.getSpeed()));
 				this.targetBounceY += ((float) (heightOffset * 3f) - 4.5f) * bounceIntensity;
 			}
+			case null, default -> {}
 		}
 
 		int swingDuration = entity.getHandSwingDuration();
