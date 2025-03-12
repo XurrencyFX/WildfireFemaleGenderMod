@@ -17,6 +17,7 @@ classes/
 *.iws
 
 #Minecraft
+run/
 runs/
 
 # vscode
